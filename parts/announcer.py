@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil  # Add this import for shutil module
 
 def add_announces_and_rename(base_torrent_path, trackers_file):
     # Check if the base torrent file exists
