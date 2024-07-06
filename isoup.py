@@ -2,39 +2,44 @@ import os
 import sys
 import subprocess
 import shutil
-import parts.announcer as announcer
 
-def delete_tmp_folder_contents():
-    tmp_folder = os.path.join(os.getcwd(), "tmp")
-    for root, dirs, files in os.walk(tmp_folder):
-        for file in files:
-            os.remove(os.path.join(root, file))
-        for dir in dirs:
-            shutil.rmtree(os.path.join(root, dir))
-    print("Deleted contents of 'tmp' folder.")
+def clear_scratch_folder():
+    scratch_folder = 'scratch'
+    for filename in os.listdir(scratch_folder):
+        file_path = os.path.join(scratch_folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(f'Failed to delete {file_path}. Reason: {e}')
+
+def run_script(script_name, *args):
+    command = ['python3', script_name] + list(args)
+    try:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running script {script_name}: {e}")
+        sys.exit(1)
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python3 isoup.py /path/to/target_file.iso -tk <tracker abbreviations>")
+        print("Usage: python3 isoup.py /path/to/iso_file.iso -tk <tracker_abbr1> <tracker_abbr2> ...")
         sys.exit(1)
-
+    
     iso_file = sys.argv[1]
     tracker_abbrs = sys.argv[3:]
-    
-    # Delete tmp folder contents
-    delete_tmp_folder_contents()
-    
-    # Run hasher.py
+
+    print("Deleted contents of 'scratch' folder.")
+    clear_scratch_folder()
+
     print("Running hasher.py...")
-    subprocess.run(['python3', 'parts/hasher.py', iso_file])
+    run_script('parts/hasher.py', iso_file)
 
-    # Run announcer.py
     print("Running announcer.py...")
-    announcer.add_announces_and_rename(iso_file, tracker_abbrs)
-
-    # Cleanup (if necessary)
-    print("Cleaning up temporary directory...")
-    # Add your cleanup code here if needed
+    import parts.announcer as announcer
+    announcer.add_announces_and_rename(iso_file, tracker_abbrs, 'data/trackers.txt')
 
 if __name__ == "__main__":
     main()
