@@ -1,41 +1,37 @@
-import os
-import subprocess
-import sys
+Running mktorrent to create base torrent: mktorrent -v -l 20 -p -a http://example.com/announce -s 262144 -n 5 /APPBOX_DATA/apps/qbittorrent.rand.appboxes.co/torrents/completed/The_Little_Mermaid_(1989)_[3D].iso -o /APPBOX_DATA/storage/bk1dd/isoup/tmp/The_Little_Mermaid_(1989)_[3D].iso/BASE_The_Little_Mermaid_(1989)_[3D].iso.torrent
+mktorrent 1.1 (c) 2007, 2009 Emil Renner Berthing
 
-def create_base_torrent(file_path, verbose=True):
-    torrent_folder = os.path.join('/APPBOX_DATA/storage/bk1dd/isoup/tmp', os.path.basename(file_path))
-    torrent_name = f"BASE_{os.path.basename(file_path)}.torrent"
-    torrent_path = os.path.join(torrent_folder, torrent_name)
+Options:
+  Announce URLs:
+    1 : http://example.com/announce
+  Torrent name: 5
+  Metafile:     /APPBOX_DATA/storage/bk1dd/isoup/tmp/The_Little_Mermaid_(1989)_[3D].iso/BASE_The_Little_Mermaid_(1989)_[3D].iso.torrent
+  Piece length: 1048576
+  Threads:      128
+  Be verbose:   yes
+  Write date:   yes
+  Web Seed URL: none
 
-    # Check if torrent file already exists
-    if os.path.exists(torrent_path):
-        os.remove(torrent_path)
-        print(f"Deleted existing torrent file: {torrent_path}")
+ Source:      262144
 
-    command = [
-        'mktorrent',
-        '-v', '-l', '20', '-p',
-        '-a', 'http://example.com/announce',
-        '-s', '262144', '-n', '5',
-        file_path,
-        '-o', torrent_path
-    ]
+  Comment:      none
 
-    if verbose:
-        print(f"Running mktorrent to create base torrent: {' '.join(command)}")
 
-    try:
-        subprocess.run(command, check=True)
-        print(f"Successfully created base torrent file '{torrent_name}' in '{torrent_folder}'")
-    except subprocess.CalledProcessError as e:
-        print(f"Error creating base torrent file: {e}")
-        raise
+37452447744 bytes in all.
+That's 35718 pieces of 1048576 bytes each.
 
-# Example usage
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 hasher.py /path/to/target_file.iso")
-        sys.exit(1)
-    
-    target_file = sys.argv[1]
+Error creating '/APPBOX_DATA/storage/bk1dd/isoup/tmp/The_Little_Mermaid_(1989)_[3D].iso/BASE_The_Little_Mermaid_(1989)_[3D].iso.torrent': No such file or directory
+Error creating base torrent file: Command '['mktorrent', '-v', '-l', '20', '-p', '-a', 'http://example.com/announce', '-s', '262144', '-n', '5', '/APPBOX_DATA/apps/qbittorrent.rand.appboxes.co/torrents/completed/The_Little_Mermaid_(1989)_[3D].iso', '-o', '/APPBOX_DATA/storage/bk1dd/isoup/tmp/The_Little_Mermaid_(1989)_[3D].iso/BASE_The_Little_Mermaid_(1989)_[3D].iso.torrent']' returned non-zero exit status 1.
+Traceback (most recent call last):
+  File "/APPBOX_DATA/storage/bk1dd/isoup/parts/hasher.py", line 41, in <module>
     create_base_torrent(target_file)
+  File "/APPBOX_DATA/storage/bk1dd/isoup/parts/hasher.py", line 28, in create_base_torrent
+    subprocess.run(command, check=True)
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['mktorrent', '-v', '-l', '20', '-p', '-a', 'http://example.com/announce', '-s', '262144', '-n', '5', '/APPBOX_DATA/apps/qbittorrent.rand.appboxes.co/torrents/completed/The_Little_Mermaid_(1989)_[3D].iso', '-o', '/APPBOX_DATA/storage/bk1dd/isoup/tmp/The_Little_Mermaid_(1989)_[3D].iso/BASE_The_Little_Mermaid_(1989)_[3D].iso.torrent']' returned non-zero exit status 1.
+Running announcer.py...
+Usage: python3 02announcer.py /path/to/base.torrent /path/to/trackers.txt
+Cleaning up temporary directory...
+Error cleaning up /path/to/isoup/scratch: [Errno 2] No such file or directory: '/path/to/isoup/scratch'
+abc@ubuntu:/APPBOX_DATA/storage/bk1dd/isoup$ 
