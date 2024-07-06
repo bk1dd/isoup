@@ -1,54 +1,46 @@
 import os
+import shutil
 import sys
-import shutil  # Add this import for shutil module
 
 def add_announces_and_rename(base_torrent_path, trackers_file):
-    # Check if the base torrent file exists
-    if not os.path.isfile(base_torrent_path):
-        print(f"Error: Base torrent file '{base_torrent_path}' not found.")
+    # Check if trackers_file exists
+    if not os.path.exists(trackers_file):
+        print(f"Error: Trackers file '{trackers_file}' not found.")
         return
     
-    # Read trackers from file
-    trackers = read_trackers(trackers_file)
+    # Open trackers file and read announce URLs
+    with open(trackers_file, 'r') as f:
+        lines = f.readlines()
+        announce_urls = [line.strip().split(':')[1] for line in lines if line.strip().startswith('AB')]
     
-    # Add trackers to the base torrent file
-    for tracker_abbr, announce_url in trackers.items():
-        new_torrent_name = f"{tracker_abbr}_{os.path.basename(base_torrent_path)}"
-        new_torrent_path = os.path.join(os.path.dirname(base_torrent_path), new_torrent_name)
-        
-        # Copy base torrent to new path
-        try:
-            shutil.copy(base_torrent_path, new_torrent_path)
-        except IOError as e:
-            print(f"Error copying torrent file: {e}")
-            continue
-        
-        # Add announce URL to the new torrent file
-        command = f"transmission-edit -a {announce_url} {new_torrent_path}"
-        os.system(command)
-        
-        print(f"Added announce '{announce_url}' to '{new_torrent_path}'")
-
-def read_trackers(trackers_file):
-    trackers = {}
+    if not announce_urls:
+        print("Error: No announce URLs found in trackers file.")
+        return
+    
+    # Extract torrent name from base_torrent_path
+    torrent_name = os.path.basename(base_torrent_path)
+    
+    # Create new torrent name with abbreviations
+    for line in lines:
+        if line.strip().startswith('AB'):
+            abbreviation = line.strip().split(':')[0]
+            new_torrent_name = f"{abbreviation}_{torrent_name}"
+            break
+    
+    # Set path for new torrent file in tmp folder
+    tmp_folder = os.path.join('tmp', os.path.dirname(base_torrent_path))
+    new_torrent_path = os.path.join(tmp_folder, new_torrent_name)
+    
+    # Copy base torrent file to new location with new name
     try:
-        with open(trackers_file, 'r') as f:
-            for line in f:
-                if line.strip():  # Check if the line is not empty
-                    parts = line.strip().split(':', 1)
-                    if len(parts) == 2:
-                        tracker_abbr = parts[0].strip()
-                        announce_url = parts[1].strip()
-                        trackers[tracker_abbr] = announce_url
-                    else:
-                        print(f"Invalid line in trackers file: {line}")
-    except FileNotFoundError:
-        print(f"Trackers file '{trackers_file}' not found.")
-    return trackers
+        shutil.copy(base_torrent_path, new_torrent_path)
+        print(f"Successfully copied base torrent to '{new_torrent_path}'.")
+    except shutil.Error as e:
+        print(f"Error copying torrent file: {e}")
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python3 announcer.py <base_torrent_path> <trackers_file>")
+        print("Usage: python3 announcer.py base_torrent_path trackers_file")
         sys.exit(1)
     
     base_torrent_path = sys.argv[1]
