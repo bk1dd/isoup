@@ -7,9 +7,13 @@ def calculate_piece_length(file_size):
     max_torrent_size = 1024 * 1024
 
     # Calculate piece length based on file size and desired max torrent size
-    piece_length = 20 + (file_size // max_torrent_size)
-    
-    return piece_length
+    ratio = file_size / max_torrent_size
+    piece_length = 20
+    while ratio > 1:
+        piece_length += 1
+        ratio /= 2
+
+    return int(piece_length)
 
 def create_base_torrent(target_file):
     # Check if target file exists
@@ -39,8 +43,7 @@ def create_base_torrent(target_file):
         '-l', str(piece_length),
         '-p',
         '-a', 'http://example.com/announce',  # Replace with your announce URL
-        '-s', '262144',  # Source size
-        '-n', '5',  # Torrent name length
+        '-n', '5',  # Torrent name
         target_file,
         '-o', base_torrent_file
     ]
@@ -49,6 +52,12 @@ def create_base_torrent(target_file):
     try:
         subprocess.run(command, check=True)
         print(f"Successfully created base torrent file '{os.path.basename(base_torrent_file)}' in '{os.path.dirname(base_torrent_file)}'.")
+        
+        # Move the base torrent file to the tmp folder
+        os.makedirs(os.path.join("tmp", os.path.basename(target_file)), exist_ok=True)
+        final_torrent_path = os.path.join("tmp", os.path.basename(target_file), os.path.basename(base_torrent_file))
+        os.rename(base_torrent_file, final_torrent_path)
+        print(f"Moved base torrent file to '{final_torrent_path}'.")
     except subprocess.CalledProcessError as e:
         print(f"Error creating '{base_torrent_file}': {e}")
 
