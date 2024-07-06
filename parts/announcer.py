@@ -1,47 +1,58 @@
 import os
-import sys
-import bencodepy
+import shutil
 
-def add_announces_and_rename(base_torrent_path, tracker_codes, trackers_file):
-    if not os.path.exists(trackers_file):
-        print(f"Error: Trackers file '{trackers_file}' not found.")
+def add_announces_and_rename(base_torrent_path, trackers_file):
+    # Check if the base torrent file exists
+    if not os.path.exists(base_torrent_path):
+        print(f"Error: Base torrent file '{base_torrent_path}' not found.")
         return
+    
+    # Read trackers from file
+    trackers = read_trackers(trackers_file)
+    if not trackers:
+        print(f"No trackers found in '{trackers_file}'.")
+        return
+    
+    # Process each tracker
+    for abbrev, url in trackers.items():
+        # Formulate new torrent file name with abbreviation
+        new_torrent_name = f"{abbrev}_{os.path.basename(base_torrent_path)}"
+        new_torrent_path = os.path.join(os.path.dirname(base_torrent_path), new_torrent_name)
+        
+        # Check if the renamed torrent file already exists
+        if os.path.exists(new_torrent_path):
+            print(f"Torrent file '{new_torrent_path}' already exists. Skipping.")
+            continue
+        
+        # Copy base torrent to new location with abbreviation
+        try:
+            shutil.copy(base_torrent_path, new_torrent_path)
+            print(f"Created torrent file '{new_torrent_path}'.")
+        except Exception as e:
+            print(f"Error creating '{new_torrent_path}': {e}")
 
-    # Read announce URLs from trackers.txt
+def read_trackers(trackers_file):
     trackers = {}
-    with open(trackers_file, 'r') as f:
-        for line in f:
-            code, url = line.strip().split(':', 1)
-            trackers[code] = url
-
-    # Read the base torrent file
-    with open(base_torrent_path, 'rb') as f:
-        torrent_data = bencodepy.decode(f.read())
-
-    # Add announce URLs
-    for code in tracker_codes:
-        if code in trackers:
-            if 'announce-list' not in torrent_data:
-                torrent_data['announce-list'] = []
-            torrent_data['announce-list'].append([trackers[code].encode('utf-8')])
-
-    # Write new torrent files
-    torrent_name = os.path.basename(base_torrent_path)
-    torrent_name_no_ext = os.path.splitext(torrent_name)[0]
-    for code in tracker_codes:
-        new_torrent_name = f"{code}_{torrent_name}"
-        new_torrent_path = os.path.join('tmp', torrent_name_no_ext, new_torrent_name)
-        os.makedirs(os.path.dirname(new_torrent_path), exist_ok=True)
-        with open(new_torrent_path, 'wb') as f:
-            f.write(bencodepy.encode(torrent_data))
-        print(f"Created torrent with announce URL {trackers[code]}: {new_torrent_name}")
+    try:
+        with open(trackers_file, 'r') as f:
+            for line in f:
+                parts = line.strip().split(':')
+                if len(parts) == 2:
+                    abbrev = parts[0].strip()
+                    url = parts[1].strip()
+                    trackers[abbrev] = url
+    except FileNotFoundError:
+        print(f"Error: Trackers file '{trackers_file}' not found.")
+    return trackers
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print("Usage: python3 announcer.py /path/to/base.torrent TRACKER_CODES /path/to/trackers.txt")
+    import sys
+    
+    if len(sys.argv) < 3:
+        print("Usage: python announcer.py <base_torrent_path> <trackers_file>")
         sys.exit(1)
-
+    
     base_torrent_path = sys.argv[1]
-    tracker_codes = sys.argv[2:-1]
-    trackers_file = sys.argv[-1]
-    add_announces_and_rename(base_torrent_path, tracker_codes, trackers_file)
+    trackers_file = sys.argv[2]
+    
+    add_announces_and_rename(base_torrent_path, trackers_file)
