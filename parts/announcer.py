@@ -1,51 +1,41 @@
-import os
 import sys
-import subprocess
-import shutil
+import os
 
 def add_announces_and_rename(base_torrent_path, trackers_file):
-    # Read announce URLs and abbreviations from trackers.txt
-    announce_urls = {}
+    # Check if the trackers_file exists
+    if not os.path.exists(trackers_file):
+        print(f"Error: Trackers file '{trackers_file}' not found.")
+        return
+    
+    # Read announce URLs from trackers_file
+    announces = []
     with open(trackers_file, 'r') as f:
         for line in f:
-            abbreviation, announce_url = line.strip().split(':')
-            announce_urls[abbreviation.strip()] = announce_url.strip()
+            line = line.strip()
+            if line.startswith('#') or not line:
+                continue
+            abbrev, url = line.split(':', 1)
+            abbrev = abbrev.strip()
+            url = url.strip()
+            announces.append((abbrev, url))
 
-    # Iterate over announce URLs and create new torrents
-    for abbreviation, announce_url in announce_urls.items():
-        # Create new torrent file name with abbreviation
-        new_torrent_name = f"{abbreviation}_{os.path.basename(base_torrent_path)}"
-        new_torrent_path = os.path.join(os.path.dirname(base_torrent_path), new_torrent_name)
-
-        # Copy base torrent to new torrent file
-        shutil.copyfile(base_torrent_path, new_torrent_path)
-
-        # Add announce URL to new torrent file
-        mktorrent_command = [
-            "mktorrent",
-            "-v",  # Verbose output
-            "-a", announce_url,  # Add announce URL
-            "-o", new_torrent_path,  # Output path for the new torrent file
-            base_torrent_path  # Path to the base torrent file
-        ]
-
-        # Execute mktorrent command
-        try:
-            subprocess.run(mktorrent_command, check=True)
-            print(f"Successfully added announce '{announce_url}' to '{new_torrent_path}'")
-        except subprocess.CalledProcessError as e:
-            print(f"Error adding announce to '{new_torrent_path}': {e}")
-            sys.exit(1)
+    # Append announces to base torrent name
+    base_torrent_dir = os.path.dirname(base_torrent_path)
+    base_torrent_name = os.path.basename(base_torrent_path)
+    for abbrev, url in announces:
+        new_torrent_name = f"{abbrev}_{base_torrent_name}"
+        new_torrent_path = os.path.join(base_torrent_dir, new_torrent_name)
+        
+        # Copy base torrent to new name with appended abbreviation
+        os.rename(base_torrent_path, new_torrent_path)
+        print(f"Added announce: {url}")
 
 if __name__ == "__main__":
-    # Check if base torrent file path and trackers file path arguments are provided
-    if len(sys.argv) < 3:
-        print("Usage: python3 02announcer.py /path/to/base.torrent /path/to/trackers.txt")
+    if len(sys.argv) != 3:
+        print("Usage: python3 announcer.py /path/to/base.torrent /path/to/trackers.txt")
         sys.exit(1)
-
-    # Get base torrent file path and trackers file path from command-line arguments
+    
     base_torrent_path = sys.argv[1]
     trackers_file = sys.argv[2]
-
-    # Call function to add announces and rename torrents
+    
     add_announces_and_rename(base_torrent_path, trackers_file)
