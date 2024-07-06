@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 
 def add_announces_and_rename(base_torrent_path, trackers_file):
     if not os.path.exists(trackers_file):
@@ -26,6 +27,10 @@ def add_announces_and_rename(base_torrent_path, trackers_file):
             print(f"Error copying '{os.path.basename(base_torrent_path)}': {e}")
 
 def main():
+    if len(sys.argv) < 3:
+        print("Usage: python3 announcer.py <base_torrent_path> <trackers_file>")
+        sys.exit(1)
+
     base_torrent_path = sys.argv[1]
     trackers_file = sys.argv[2]
     add_announces_and_rename(base_torrent_path, trackers_file)
