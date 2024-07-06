@@ -1,62 +1,54 @@
 import os
+import shutil
 import sys
-import subprocess
+from parts import hasher, announcer, extractor, screenshotter, cleanup
 
-# Path constants
-ISOPATH = sys.argv[1] if len(sys.argv) > 1 else None
-TRACKER_ABBREVIATIONS = sys.argv[2:] if len(sys.argv) > 2 else []
-
-# Directories
-ISOUUID = os.path.splitext(os.path.basename(ISOPATH))[0]
-BASEDIR = os.path.dirname(os.path.realpath(__file__))
-TMPDIR = os.path.join(BASEDIR, 'tmp')
-SCRATCHDIR = os.path.join(BASEDIR, 'scratch')
-PARTSDIR = os.path.join(BASEDIR, 'parts')
-
-def create_tmp_directory():
-    """Create a temporary directory for this ISO."""
-    tmp_isouuid_dir = os.path.join(TMPDIR, ISOUUID)
-    os.makedirs(tmp_isouuid_dir, exist_ok=True)
-    return tmp_isouuid_dir
-
-def run_hasher(iso_path, tmp_dir):
-    """Run hasher.py to create base .torrent file."""
-    hasher_script = os.path.join(PARTSDIR, 'hasher.py')
-    subprocess.run(['python3', hasher_script, iso_path, tmp_dir])
-
-def run_announcer(tmp_dir, tracker_abbreviations):
-    """Run announcer.py to create multiple .torrent files with different announces."""
-    announcer_script = os.path.join(PARTSDIR, 'announcer.py')
-    subprocess.run(['python3', announcer_script, tmp_dir] + tracker_abbreviations)
+def delete_tmp_contents():
+    tmp_dir = 'tmp'
+    try:
+        # Iterate over all files and directories in tmp directory
+        for item in os.listdir(tmp_dir):
+            item_path = os.path.join(tmp_dir, item)
+            # Check if item is a file or directory and delete it
+            if os.path.isfile(item_path):
+                os.remove(item_path)
+            elif os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+        print(f"Deleted contents of '{tmp_dir}' folder.")
+    except OSError as e:
+        print(f"Error deleting contents of '{tmp_dir}' folder: {e}")
 
 def main():
-    if not ISOPATH or not os.path.isfile(ISOPATH):
-        print("Error: Provide a valid path to the ISO file.")
-        return
-
-    # Create temporary directory
-    tmp_dir = create_tmp_directory()
-
-    try:
-        # Run hasher.py
-        print("Running hasher.py...")
-        run_hasher(ISOPATH, tmp_dir)
-
-        # Run announcer.py with provided tracker abbreviations
-        print("Running announcer.py...")
-        run_announcer(tmp_dir, TRACKER_ABBREVIATIONS)
-
-        # Add more scripts as needed, e.g., extractor.py, screenshotter.py, cleanup.py
-
-    except Exception as e:
-        print(f"Error: {e}")
-
-    finally:
-        # Clean up temporary directory
-        if tmp_dir and os.path.exists(tmp_dir):
-            print("Cleaning up temporary directory...")
-            subprocess.run(['python3', os.path.join(PARTSDIR, 'cleanup.py'), tmp_dir])
+    if len(sys.argv) < 3:
+        print("Usage: python3 isoup.py /path/to/iso_file -tk abbreviationsforannounces")
+        sys.exit(1)
+    
+    iso_file = sys.argv[1]
+    abbreviations = sys.argv[2:]
+    
+    # Delete contents of tmp folder
+    delete_tmp_contents()
+    
+    # Run hasher.py to create base torrent
+    print("Running hasher.py...")
+    hasher.create_base_torrent(iso_file)
+    
+    # Run announcer.py to add announce URLs and rename torrent
+    print("Running announcer.py...")
+    announcer.add_announces_and_rename(iso_file, abbreviations)
+    
+    # Run extractor.py to extract ISO content
+    print("Running extractor.py...")
+    extractor.extract_iso(iso_file)
+    
+    # Run screenshotter.py to take screenshots
+    num_screenshots = 5  # Example: Replace with actual number from user input
+    print(f"Running screenshotter.py to take {num_screenshots} screenshots...")
+    screenshotter.take_screenshots(num_screenshots)
+    
+    # Run cleanup.py to delete contents of scratch folder
+    print("Running cleanup.py to delete contents of scratch folder...")
+    cleanup.clean_scratch()
 
 if __name__ == "__main__":
     main()
-
