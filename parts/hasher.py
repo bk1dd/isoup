@@ -1,47 +1,62 @@
 import os
 import subprocess
-import sys
+import shutil
 
-def create_base_torrent(file_path, verbose=True):
-    # Create folder if not exists
-    torrent_folder = os.path.join('/APPBOX_DATA/storage/bk1dd/isoup/tmp', os.path.basename(file_path))
-    os.makedirs(torrent_folder, exist_ok=True)
+def calculate_piece_length(file_size):
+    # Desired maximum size of the torrent file in bytes (1 MB)
+    max_torrent_size = 1024 * 1024
 
-    # Define torrent file name
-    torrent_name = f"BASE_{os.path.basename(file_path)}.torrent"
-    torrent_path = os.path.join(torrent_folder, torrent_name)
+    # Calculate piece length based on file size and desired max torrent size
+    piece_length = max(262144, (file_size * 20) // max_torrent_size)
+    return piece_length
 
-    # Check if torrent file already exists, delete if so
-    if os.path.exists(torrent_path):
-        os.remove(torrent_path)
-        if verbose:
-            print(f"Deleted existing torrent file: {torrent_path}")
+def create_base_torrent(target_file):
+    # Determine paths relative to isoup folder
+    scratch_folder = 'scratch/'
+    tmp_folder = 'tmp/'
 
-    # Construct mktorrent command
+    # Create folder in tmp directory with the target file's name
+    target_name = os.path.splitext(os.path.basename(target_file))[0]
+    tmp_target_folder = os.path.join(tmp_folder, target_name)
+    os.makedirs(tmp_target_folder, exist_ok=True)
+
+    # Check if base torrent file already exists in tmp folder
+    base_torrent_path_tmp = os.path.join(tmp_target_folder, f"BASE_{target_name}.torrent")
+    if os.path.exists(base_torrent_path_tmp):
+        print(f"Reusing hash: Base torrent file 'BASE_{target_name}.torrent' already exists in '{tmp_target_folder}'")
+        return
+
+    # Calculate piece length dynamically based on file size
+    file_size = os.path.getsize(target_file)
+    piece_length = calculate_piece_length(file_size)
+
+    # Construct paths for base torrent creation and move
+    base_torrent_path_scratch = os.path.join(scratch_folder, f"BASE_{target_name}.torrent")
+
+    # Create base torrent file in scratch folder
     command = [
         'mktorrent',
-        '-v', '-l', '20', '-p',
-        '-a', 'http://example.com/announce',
-        '-s', '262144', '-n', '5',
-        file_path,
-        '-o', torrent_path
+        '-v',
+        '-l', str(piece_length),  # Use calculated piece length
+        '-p',
+        '-a', 'http://example.com/announce',  # Replace with actual announce URL
+        '-s', '262144',
+        '-n', '5',
+        target_file,
+        '-o', base_torrent_path_scratch
     ]
 
-    if verbose:
-        print(f"Running mktorrent to create base torrent: {' '.join(command)}")
+    subprocess.run(command, check=True)
 
-    try:
-        subprocess.run(command, check=True)
-        print(f"Successfully created base torrent file '{torrent_name}' in '{torrent_folder}'")
-    except subprocess.CalledProcessError as e:
-        print(f"Error creating base torrent file: {e}")
-        raise
+    # Move base torrent file to tmp directory
+    shutil.move(base_torrent_path_scratch, base_torrent_path_tmp)
+    print(f"Successfully created base torrent file 'BASE_{target_name}.torrent' in '{tmp_target_folder}'")
 
-# Example usage
 if __name__ == "__main__":
+    import sys
     if len(sys.argv) < 2:
-        print("Usage: python3 hasher.py /path/to/target_file.iso")
+        print("Usage: python3 hasher.py /path/to/target.iso")
         sys.exit(1)
-    
+
     target_file = sys.argv[1]
     create_base_torrent(target_file)
