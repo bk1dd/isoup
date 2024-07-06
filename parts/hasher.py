@@ -7,7 +7,8 @@ def calculate_piece_length(file_size):
     max_torrent_size = 1024 * 1024
 
     # Calculate piece length based on file size and desired max torrent size
-    piece_length = max(262144, (file_size * 20) // max_torrent_size)
+    piece_length = max(18, min(18 + (file_size // max_torrent_size), 28))
+    
     return piece_length
 
 def create_base_torrent(target_file):
